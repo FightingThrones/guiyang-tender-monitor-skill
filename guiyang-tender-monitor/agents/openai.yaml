@@ -1,0 +1,4 @@
+interface:
+  display_name: "贵阳招采监控"
+  short_description: "每日查询贵州贵阳软件类招投标与竞价信息并生成邮件报告"
+  default_prompt: "查询今天贵州贵阳适合小软件公司的招投标、竞价、询比、询价项目并生成邮件报告。"

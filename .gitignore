@@ -1,0 +1,17 @@
+.env
+.env.*
+*.pem
+*.key
+id_*
+__pycache__/
+*.pyc
+*.pyo
+*.log
+reports/
+data/
+*.jsonl
+服务器信息*
+*密码*
+*secret*
+*token*
+*credential*
