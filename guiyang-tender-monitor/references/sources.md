@@ -8,7 +8,18 @@ This skill discovers tender and procurement opportunities through a mix of offic
 - 全国公共资源交易平台: `ggzy.gov.cn`
 - 中国招标投标公共服务平台: `cebpubservice.com`
 - 军队采购网: `plap.mil.cn`
+- 国铁采购平台: `cg.95306.cn`
 - Public procurement channels of universities, hospitals, disease control centers, SOEs, and public institutions
+
+## Built-in Target Source Pool
+
+The structured source pool lives in:
+
+```text
+data/target_sources.csv
+```
+
+The first batch includes national and provincial public-resource/government-procurement entry points from the user-provided source list, including Beijing, Hebei, Shanxi, Inner Mongolia, Liaoning, Jilin, Heilongjiang, Shanghai, Jiangsu, Zhejiang, Fujian, Jiangxi, Henan, Hubei, Hunan, Guangdong, Guangxi, Hainan, Sichuan, Guizhou, Yunnan, Tibet, Shaanxi, Gansu, Qinghai, Ningxia, and Xinjiang.
 
 ## Included Regional Examples
 

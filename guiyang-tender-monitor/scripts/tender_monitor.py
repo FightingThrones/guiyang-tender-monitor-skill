@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as dt
 import email.message
 import html
@@ -26,6 +27,8 @@ except ImportError:  # pragma: no cover
 
 DEFAULT_RECIPIENT = os.getenv("TENDER_DEFAULT_RECIPIENT", "")
 DEFAULT_OUTPUT_DIR = Path("reports")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TARGET_SOURCES_CSV = REPO_ROOT / "data" / "target_sources.csv"
 
 SOFTWARE_TERMS = [
     "软件", "系统", "平台", "信息化", "运维", "开发", "定制开发", "数字化",
@@ -124,6 +127,42 @@ DIRECT_SOURCES = [
     ("贵州兴业利达", "https://www.gzxyld.cn/"),
     ("贵州阳光产权交易所", "https://www.prechina.net/project/projectlist.html"),
 ]
+
+
+def load_target_sources(path: Path = TARGET_SOURCES_CSV) -> list[tuple[str, str]]:
+    if not path.exists():
+        return []
+    sources: list[tuple[str, str]] = []
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as f:
+            for row in csv.DictReader(f):
+                name = (row.get("name") or "").strip()
+                url = (row.get("url") or "").strip()
+                if name and url:
+                    sources.append((name, url))
+    except Exception:
+        return []
+    return sources
+
+
+def source_pool() -> list[tuple[str, str]]:
+    seen: set[str] = set()
+    sources: list[tuple[str, str]] = []
+    for name, url in load_target_sources() + DIRECT_SOURCES:
+        key = normalize_url(url)
+        if key and key not in seen:
+            seen.add(key)
+            sources.append((name, url))
+    return sources
+
+
+def official_domains() -> set[str]:
+    domains = set(OFFICIAL_DOMAINS)
+    for _, url in load_target_sources():
+        netloc = urllib.parse.urlparse(url).netloc.lower()
+        if netloc:
+            domains.add(netloc)
+    return domains
 
 SEARCH_QUERIES = [
     '"软件开发" "竞争性磋商公告" 2026 采购',
@@ -225,7 +264,8 @@ def direct_source_items(max_sources: int | None = None) -> list[dict]:
         re.IGNORECASE | re.DOTALL,
     )
     date_pattern = re.compile(r"20\d{2}[-年/.]\d{1,2}[-月/.]\d{1,2}日?")
-    sources = DIRECT_SOURCES[:max_sources] if max_sources else DIRECT_SOURCES
+    pool = source_pool()
+    sources = pool[:max_sources] if max_sources else pool
     for source_name, url in sources:
         try:
             page = decode_page(fetch_url(url, timeout=25))
@@ -289,7 +329,7 @@ def score_item(item: dict) -> tuple[int, list[str]]:
             reasons.append(term)
 
     domain = urllib.parse.urlparse(item.get("url", "")).netloc.lower()
-    if any(d in domain for d in OFFICIAL_DOMAINS):
+    if any(d in domain for d in official_domains()):
         score += 4
         reasons.append("官方/准官方来源")
     if any(term in text for term in ["全国", "政府采购", "公共资源", "中小企业", "小微企业"]):
@@ -317,7 +357,7 @@ def is_procurement_like(item: dict) -> bool:
     has_software = any(term.lower() in text.lower() for term in SOFTWARE_TERMS)
     has_location = any(place in text for place in REGION_TERMS) or any(
         domain in urllib.parse.urlparse(item.get("url", "")).netloc.lower()
-        for domain in OFFICIAL_DOMAINS
+        for domain in official_domains()
     )
     has_noise = any(term in text for term in ["旅游", "景点", "攻略", "百科", "软件下载", "下载站"])
     return has_trade_mode and has_software and has_location and not has_noise

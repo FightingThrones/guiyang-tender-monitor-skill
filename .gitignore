@@ -12,7 +12,8 @@ reports-test/
 reports-demo/
 reports-public/
 reports-real/
-data/
+data/*
+!data/target_sources.csv
 *.jsonl
 服务器信息*
 *密码*
