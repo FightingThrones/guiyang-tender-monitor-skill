@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Monitor Guizhou/Guiyang tender opportunities and optionally email a report."""
+"""Monitor nationwide SME-friendly tender opportunities and optionally email a report."""
 
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ except ImportError:  # pragma: no cover
     winreg = None
 
 
-DEFAULT_RECIPIENT = "1690069811@qq.com"
-DEFAULT_OUTPUT_DIR = Path(r"H:\常规临时任务\招投标日报")
+DEFAULT_RECIPIENT = os.getenv("TENDER_DEFAULT_RECIPIENT", "")
+DEFAULT_OUTPUT_DIR = Path("reports")
 
 SOFTWARE_TERMS = [
     "软件", "系统", "平台", "信息化", "运维", "开发", "定制开发", "数字化",
@@ -39,8 +39,16 @@ MODE_TERMS = [
 ]
 
 BUYER_TERMS = [
-    "贵阳", "铜仁", "思南", "思南县", "贵州", "高校", "学院", "大学", "医院", "疾控", "教育局",
-    "人社", "国企", "公共资源", "招采",
+    "高校", "学院", "大学", "医院", "疾控", "教育局", "人社", "国企", "公共资源", "招采",
+    "政府采购", "事业单位", "中小企业", "小微企业", "科技局", "工信", "政务服务", "数据局",
+]
+
+REGION_TERMS = [
+    "全国", "北京", "天津", "上海", "重庆", "河北", "山西", "辽宁", "吉林", "黑龙江",
+    "江苏", "浙江", "安徽", "福建", "江西", "山东", "河南", "湖北", "湖南", "广东",
+    "海南", "四川", "贵州", "云南", "陕西", "甘肃", "青海", "内蒙古", "广西", "西藏",
+    "宁夏", "新疆", "香港", "澳门", "台湾", "贵阳", "铜仁", "思南", "深圳", "广州",
+    "杭州", "南京", "成都", "武汉", "西安", "长沙", "郑州", "合肥", "南昌", "昆明",
 ]
 
 HARDWARE_NOISE_TERMS = [
@@ -55,6 +63,12 @@ NON_PROJECT_TERMS = [
 ]
 
 OFFICIAL_DOMAINS = [
+    "ccgp.gov.cn",
+    "ggzy.gov.cn",
+    "cebpubservice.com",
+    "chinabidding.com.cn",
+    "ctbpsp.com",
+    "plap.mil.cn",
     "ggzy.guizhou.gov.cn",
     "ggzy.guiyang.gov.cn",
     "ggzy.gov.cn",
@@ -87,6 +101,10 @@ OFFICIAL_DOMAINS = [
 ]
 
 DIRECT_SOURCES = [
+    ("中国政府采购网", "http://www.ccgp.gov.cn/cggg/dfgg/"),
+    ("全国公共资源交易平台", "http://www.ggzy.gov.cn/information/html/a/"),
+    ("中国招标投标公共服务平台", "https://www.cebpubservice.com/"),
+    ("军队采购网", "https://www.plap.mil.cn/"),
     ("贵阳学院招标采购", "https://www.gyu.edu.cn/xwzl/zbcg.htm"),
     ("贵州财经大学招标采购", "https://www.gufe.edu.cn/index/zbcg.htm"),
     ("贵州师范学院学校采购", "https://www.gznc.edu.cn/"),
@@ -108,16 +126,22 @@ DIRECT_SOURCES = [
 ]
 
 SEARCH_QUERIES = [
-    '"贵州" "软件" "竞争性磋商公告" 2026 采购',
-    '"贵阳" "系统" "竞争性磋商公告" 2026 采购',
-    '"贵阳" "软件开发" "采购公告" 2026',
-    '"贵州" "信息化" "询比采购公告" 2026',
-    '"贵州" "运维" "询价公告" "软件" 2026',
-    '"贵州" "网上竞价" "软件" "采购公告" 2026',
-    '"贵州" "高校" "系统" "竞争性磋商公告" 2026',
-    '"贵阳" "学院" "平台" "竞争性磋商公告" 2026',
-    '"贵州" "医院" "信息化" "竞争性磋商公告" 2026',
-    '"贵州" "国企" "软件" "询比采购" 2026',
+    '"软件开发" "竞争性磋商公告" 2026 采购',
+    '"信息化" "竞争性磋商公告" 2026 采购',
+    '"系统运维" "采购公告" 2026',
+    '"数字化" "询比采购公告" 2026',
+    '"数据治理" "竞争性磋商" 2026',
+    '"网络安全" "询价公告" 2026',
+    '"小程序" "采购公告" 2026',
+    '"AI" "采购公告" "软件" 2026',
+    '"政务服务" "系统" "竞争性磋商公告" 2026',
+    '"高校" "平台" "竞争性磋商公告" 2026',
+    '"医院" "信息化" "竞争性磋商公告" 2026',
+    '"国企" "软件" "询比采购" 2026',
+    'site:ccgp.gov.cn "软件开发" "竞争性磋商公告" "2026"',
+    'site:ccgp.gov.cn "信息化" "采购公告" "2026"',
+    'site:ggzy.gov.cn "软件" "采购公告" "2026"',
+    'site:cebpubservice.com "系统" "招标公告" "2026"',
     'site:ggzy.guizhou.gov.cn "软件" "竞争性磋商公告" "2026"',
     'site:ggzy.guiyang.gov.cn "软件" "采购公告" "2026"',
     'site:gmc.edu.cn "采购公告" "软件" "2026"',
@@ -258,14 +282,16 @@ def score_item(item: dict) -> tuple[int, list[str]]:
         if term in text:
             score += 2
             reasons.append(term)
+    for term in REGION_TERMS:
+        if term in text:
+            score += 1
+            reasons.append(term)
 
     domain = urllib.parse.urlparse(item.get("url", "")).netloc.lower()
     if any(d in domain for d in OFFICIAL_DOMAINS):
         score += 4
         reasons.append("官方/准官方来源")
-    if "贵阳" in text:
-        score += 4
-    if "贵州" in text:
+    if any(term in text for term in ["全国", "政府采购", "公共资源", "中小企业", "小微企业"]):
         score += 2
     if "中标" in text or "成交公告" in text or "结果公告" in text:
         score -= 3
@@ -288,7 +314,7 @@ def is_procurement_like(item: dict) -> bool:
         ("招标" in text or "采购" in text) and ("公告" in text or "项目" in text)
     )
     has_software = any(term.lower() in text.lower() for term in SOFTWARE_TERMS)
-    has_location = any(place in text for place in ["贵州", "贵阳", "铜仁", "思南", "思南县"]) or any(
+    has_location = any(place in text for place in REGION_TERMS) or any(
         domain in urllib.parse.urlparse(item.get("url", "")).netloc.lower()
         for domain in OFFICIAL_DOMAINS
     )
@@ -410,6 +436,9 @@ def evaluate_suitability(item: dict, detail_text: str) -> tuple[str, str]:
     if any(term in text for term in ["定制开发", "软件开发", "平台", "系统", "信息化", "运维", "数字化", "AI", "大数据"]):
         strengths.append("软件/系统交付匹配")
         score += 8
+    if any(term in text for term in ["中小企业", "小微企业", "专门面向中小企业", "价格扣除", "政府采购促进中小企业"]):
+        strengths.append("中小企业政策友好")
+        score += 5
     if any(term in text for term in ["高校", "学院", "大学", "医院", "疾控"]):
         strengths.append("事业单位项目")
         score += 4
@@ -548,19 +577,19 @@ def make_report(items: list[dict], output_dir: Path) -> tuple[Path, Path, Path, 
     now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8)))
     date_label = now.strftime("%Y-%m-%d")
     output_dir.mkdir(parents=True, exist_ok=True)
-    md_path = output_dir / f"贵州软件招采日报-{date_label}.md"
-    html_path = output_dir / f"贵州软件招采日报-{date_label}.html"
-    json_path = output_dir / f"贵州软件招采日报-{date_label}.json"
+    md_path = output_dir / f"全国中小企业软件招采机会日报-{date_label}.md"
+    html_path = output_dir / f"全国中小企业软件招采机会日报-{date_label}.html"
+    json_path = output_dir / f"全国中小企业软件招采机会日报-{date_label}.json"
 
     active = [i for i in items if i.get("suitability") in ("高", "中")]
     leads = [i for i in items if i.get("suitability") == "低"]
 
     lines = [
-        f"# 贵州软件招采日报 - {date_label}",
+        f"# 全国中小企业软件招采机会日报 - {date_label}",
         "",
         f"生成时间：{now.strftime('%Y-%m-%d %H:%M:%S')} 北京时间",
         "",
-        "说明：本报告覆盖贵阳、铜仁市、思南县等贵州重点区域，自动打开公告详情页提取类型、金额、状态、适合度等字段。第三方聚合站线索必须回到采购人官网、公共资源平台或交易平台核验原公告。",
+        "说明：本报告面向全国中小企业，重点筛选软件开发、系统平台、信息化、数字化、运维、网络安全、AI、小程序、接口集成等可承接项目。第三方聚合站线索必须回到采购人官网、公共资源平台或交易平台核验原公告。",
         "",
         f"高/中适合度项目：{len(active)} 条；低适合度或需核验项目：{len(leads)} 条。",
         "",
@@ -692,8 +721,8 @@ def build_email_html(items: list[dict], now: dt.datetime) -> str:
 </head>
 <body>
   <div class="wrap">
-    <h1>贵州软件招采日报 - {esc(now.strftime('%Y-%m-%d'))}</h1>
-    <div class="summary">生成时间：{esc(now.strftime('%Y-%m-%d %H:%M:%S'))} 北京时间。覆盖贵阳、铜仁市、思南县等贵州重点区域；已打开公告详情页，提取类型、金额、状态、适合度、采购人和代理机构。</div>
+    <h1>全国中小企业软件招采机会日报 - {esc(now.strftime('%Y-%m-%d'))}</h1>
+    <div class="summary">生成时间：{esc(now.strftime('%Y-%m-%d %H:%M:%S'))} 北京时间。面向全国中小企业，优先识别软件开发、信息化、数字化、运维、网络安全等可承接机会；已打开公告详情页，提取类型、金额、状态、适合度、采购人和代理机构。</div>
     <div class="note">提醒：竞争性磋商通常不是最低价中标，而是综合评分；更接近低价优先的是网上竞价、询价、竞争性谈判。所有线索投标前仍需回原公告核验。</div>
     <table>
       <thead>
@@ -789,7 +818,7 @@ def markdown_to_simple_html(markdown: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Monitor Guizhou/Guiyang software tender opportunities.",
+        description="Monitor nationwide SME-friendly software and digitalization tender opportunities.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """
@@ -815,7 +844,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"HTML written: {html_path}")
 
     if args.send_email and not args.no_email:
-        subject = f"贵州软件招采日报 {dt.datetime.now().strftime('%Y-%m-%d')}"
+        subject = f"全国中小企业软件招采机会日报 {dt.datetime.now().strftime('%Y-%m-%d')}"
         try:
             send_email(args.recipient, subject, report[:12000], [md_path, json_path, html_path], html_body=html_body)
             print(f"Email sent to: {args.recipient}")

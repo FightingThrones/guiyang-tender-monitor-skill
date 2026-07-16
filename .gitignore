@@ -8,6 +8,7 @@ __pycache__/
 *.pyo
 *.log
 reports/
+reports-test/
 data/
 *.jsonl
 服务器信息*
