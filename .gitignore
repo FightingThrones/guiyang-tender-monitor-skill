@@ -10,6 +10,8 @@ __pycache__/
 reports/
 reports-test/
 reports-demo/
+reports-public/
+reports-real/
 data/
 *.jsonl
 服务器信息*

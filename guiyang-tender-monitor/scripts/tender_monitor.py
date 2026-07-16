@@ -218,14 +218,15 @@ def page_to_text(page: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def direct_source_items() -> list[dict]:
+def direct_source_items(max_sources: int | None = None) -> list[dict]:
     items: list[dict] = []
     anchor_pattern = re.compile(
         r"<a\b[^>]*href=[\"'](?P<href>[^\"']+)[\"'][^>]*>(?P<title>.*?)</a>",
         re.IGNORECASE | re.DOTALL,
     )
     date_pattern = re.compile(r"20\d{2}[-年/.]\d{1,2}[-月/.]\d{1,2}日?")
-    for source_name, url in DIRECT_SOURCES:
+    sources = DIRECT_SOURCES[:max_sources] if max_sources else DIRECT_SOURCES
+    for source_name, url in sources:
         try:
             page = decode_page(fetch_url(url, timeout=25))
         except Exception as exc:  # noqa: BLE001
@@ -515,10 +516,10 @@ def is_actionable_project(item: dict) -> bool:
     return True
 
 
-def discover(days: int, limit_per_query: int) -> list[dict]:
+def discover(days: int, limit_per_query: int, max_queries: int | None = None, max_direct_sources: int | None = None) -> list[dict]:
     seen: set[str] = set()
     results: list[dict] = []
-    for item in direct_source_items():
+    for item in direct_source_items(max_sources=max_direct_sources):
         if not is_actionable_project(item):
             continue
         key = normalize_url(item.get("url", ""))
@@ -531,7 +532,8 @@ def discover(days: int, limit_per_query: int) -> list[dict]:
         if item["score"] >= 8:
             results.append(enrich_item(item))
 
-    for query in SEARCH_QUERIES:
+    queries = SEARCH_QUERIES[:max_queries] if max_queries else SEARCH_QUERIES
+    for query in queries:
         try:
             items = bing_rss(query, count=limit_per_query)
         except Exception as exc:  # noqa: BLE001
@@ -610,6 +612,72 @@ def demo_items() -> list[dict]:
         },
     ]
     return samples
+
+
+def public_example_items() -> list[dict]:
+    """Return curated real public tender links for reproducible public screenshots."""
+    return [
+        {
+            "title": "2026年江门市城市管理和综合执法局指挥中心及政务信息化系统运维采购公告",
+            "url": "https://www.jiangmen.gov.cn/bmpd/jmscsglhzhzfj/zwgk/tzgg/content/post_3493509.html",
+            "snippet": "公开采购公告。采购内容包括智慧化城市管理信息系统、供水用水一体化服务管理平台、城市节水管理信息系统、智慧排水管理信息系统等系统运维服务。",
+            "published": "2026-05-19",
+            "query": "public-example",
+            "score": 36,
+            "reasons": ["政务信息化", "系统运维", "采购公告", "公开网页"],
+            "type": "采购公告",
+            "amount": "未识别",
+            "dates": ["2026-05-19"],
+            "deadlines": {},
+            "buyer": "江门市城市管理和综合执法局",
+            "agency": "未识别",
+            "status": "需打开公告核验",
+            "suitability": "高",
+            "suitability_note": "软件/系统交付匹配；政务信息化运维",
+            "detail_fetch": "公开网页样例",
+            "detail_excerpt": "来源为公开政府网站公告，用于展示项目报告效果。",
+        },
+        {
+            "title": "2026年“深圳市政府外办出国管理系统运维服务”项目采购公告",
+            "url": "https://fao.sz.gov.cn/xxgk/tzgg/content/post_1635173.html",
+            "snippet": "公开采购公告。为保障深圳智慧外事管理服务系统安全、稳定、高效运行，采购专业运维服务。",
+            "published": "2025-12-01",
+            "query": "public-example",
+            "score": 34,
+            "reasons": ["系统", "运维", "政府采购", "公开网页"],
+            "type": "采购公告",
+            "amount": "未识别",
+            "dates": ["2025-12-01"],
+            "deadlines": {},
+            "buyer": "深圳市人民政府外事办公室",
+            "agency": "未识别",
+            "status": "需打开公告核验",
+            "suitability": "中",
+            "suitability_note": "软件/系统交付匹配；需核验资质门槛",
+            "detail_fetch": "公开网页样例",
+            "detail_excerpt": "来源为公开政府网站公告，用于展示项目报告效果。",
+        },
+        {
+            "title": "山西税务2026年管理决策支持风险与信用等系统运维项目第2次采购招标公告",
+            "url": "https://shanxi.chinatax.gov.cn/son/detail/cz-11404-2828-1822059",
+            "snippet": "公开招标公告。采购内容包括基础软件运维、应用软件运维和相关系统运行保障。",
+            "published": "2026-06-23",
+            "query": "public-example",
+            "score": 32,
+            "reasons": ["系统运维", "公开招标", "税务系统", "公开网页"],
+            "type": "公开招标",
+            "amount": "445.43万元",
+            "dates": ["2026-07-14 15:00"],
+            "deadlines": {"response_deadline": "2026-07-14 15:00"},
+            "buyer": "国家税务总局山西省税务局",
+            "agency": "未识别",
+            "status": "可能已过期，截止 2026-07-14 15:00",
+            "suitability": "中",
+            "suitability_note": "软件/系统交付匹配；时效风险",
+            "detail_fetch": "公开网页样例",
+            "detail_excerpt": "来源为公开政府网站公告，用于展示项目报告效果。",
+        },
+    ]
 
 
 def normalize_url(url: str) -> str:
@@ -879,13 +947,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--days", type=int, default=14, help="Reserved freshness window for report context.")
     parser.add_argument("--limit-per-query", type=int, default=10)
+    parser.add_argument("--max-queries", type=int, help="Limit search queries for quick real-data runs.")
+    parser.add_argument("--max-direct-sources", type=int, help="Limit direct sources for quick real-data runs.")
     parser.add_argument("--demo", action="store_true", help="Use sanitized sample data and skip network fetching.")
+    parser.add_argument("--public-examples", action="store_true", help="Use curated real public tender links for screenshots.")
     parser.add_argument("--send-email", action="store_true")
     parser.add_argument("--no-email", action="store_true")
     args = parser.parse_args(argv)
 
     output_dir = Path(args.output_dir)
-    items = demo_items() if args.demo else discover(days=args.days, limit_per_query=args.limit_per_query)
+    if args.demo:
+        items = demo_items()
+    elif args.public_examples:
+        items = public_example_items()
+    else:
+        items = discover(
+            days=args.days,
+            limit_per_query=args.limit_per_query,
+            max_queries=args.max_queries,
+            max_direct_sources=args.max_direct_sources,
+        )
     md_path, json_path, html_path, report, html_body = make_report(items, output_dir)
     print(f"Report written: {md_path}")
     print(f"Data written: {json_path}")
