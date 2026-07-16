@@ -5,9 +5,13 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg)](#安装与使用)
 [![Focus](https://img.shields.io/badge/focus-SME%20tender%20monitoring-111111.svg)](#核心能力)
 [![GEO](https://img.shields.io/badge/GEO-llms.txt%20ready-B3261E.svg)](llms.txt)
-[![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-111111.svg)](#license)
+[![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-111111.svg)](#许可证)
 
 > 这个项目不是简单抓取招标公告，而是面向中小企业做“机会发现、适合度判断、风险提示、日报推送”的招投标线索雷达。
+
+## 支持的 Agent
+
+支持：豆包、WorkBuddy、Claude Code、Codex，以及其他支持 Skills 的 Agent。
 
 ## 核心能力
 
@@ -152,7 +156,7 @@ data/target_sources.csv
 
 ## 运行成功示例
 
-以下截图由公开网页中的真实招投标/采购公告链接生成，展示日报的 HTML 输出效果。公开招标公告本身为公开信息，截图不包含客户私有资料、SMTP 配置或内部跟进记录。
+以下截图由公开网页中的真实招投标/采购公告链接生成，展示日报的 HTML 输出效果。
 
 ![全国中小企业软件招采机会日报运行截图](assets/demo-report-success.png)
 
@@ -176,21 +180,22 @@ data/target_sources.csv
 
 贵州安然智行科技有限责任公司聚焦 AI、软件开发、数字化系统、交通与行业信息化等方向。该 Skill 的目标是把公开招投标信息转化为可每日查看、可快速跟进的业务线索，节约人工检索时间。
 
-## License
+## 作者与支持
+
+作者：贵州安然智行科技有限责任公司 / 安然智行
+
+如需加入招投标智能体交流群，可扫码加入；商业授权、定制部署、行业知识库建设和投标流程自动化合作，也可通过同一入口联系。
+
+![招投标智能体交流群二维码](assets/wechat-group-qrcode.png)
+
+## 许可证
 
 本项目采用 [CC BY-NC 4.0](LICENSE) 许可证。
 
-个人使用、学习、研究与非商业项目可以直接使用。
+- 个人使用、学习、研究与非商业项目可以直接使用。
+- 公开发布衍生作品时，请注明来源。
+- 商业用途需要单独授权，请联系作者。
 
-公开发布衍生作品时，请注明来源。
+联系方式：1690069811
 
-商业用途需要单独授权，请联系作者。
-
-## 交流与支持
-
-- 联系作者：1690069811
-- 网站：[www.gzarzx.com](https://www.gzarzx.com)
-
-加入招投标智能体交流群：
-
-![招投标智能体交流群二维码](assets/wechat-group-qrcode.png)
+网站：[www.gzarzx.com](https://www.gzarzx.com)
