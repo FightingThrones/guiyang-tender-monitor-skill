@@ -565,6 +565,53 @@ def discover(days: int, limit_per_query: int) -> list[dict]:
     return results
 
 
+def demo_items() -> list[dict]:
+    """Return deterministic, sanitized sample opportunities for screenshots and demos."""
+    samples = [
+        {
+            "title": "某市政务服务中心智能客服与工单管理系统采购项目",
+            "url": "https://example.com/tenders/demo-government-service",
+            "snippet": "竞争性磋商公告。项目面向中小企业，采购智能客服、工单管理、接口集成与运维服务。",
+            "published": "2026-07-16",
+            "query": "demo",
+            "score": 38,
+            "reasons": ["软件", "系统", "竞争性磋商", "中小企业政策友好", "官方/准官方来源"],
+            "type": "竞争性磋商",
+            "amount": "86万元",
+            "dates": ["2026-08-20 17:00"],
+            "deadlines": {"response_deadline": "2026-08-20 17:00"},
+            "buyer": "某市政务服务中心",
+            "agency": "某市政府采购中心",
+            "status": "进行中，截止 2026-08-20 17:00",
+            "suitability": "高",
+            "suitability_note": "软件/系统交付匹配；中小企业政策友好",
+            "detail_fetch": "演示数据",
+            "detail_excerpt": "脱敏演示数据，用于展示报告结构和成功运行结果。",
+        },
+        {
+            "title": "某高校数据治理与可视化平台建设项目",
+            "url": "https://example.com/tenders/demo-university-data",
+            "snippet": "采购公告。建设数据治理、数据看板、统一接口和后续运维服务。",
+            "published": "2026-07-16",
+            "query": "demo",
+            "score": 31,
+            "reasons": ["数据", "平台", "高校", "采购公告"],
+            "type": "采购公告",
+            "amount": "48万元",
+            "dates": ["2026-08-05 10:00"],
+            "deadlines": {"response_deadline": "2026-08-05 10:00"},
+            "buyer": "某高校信息化办公室",
+            "agency": "某采购代理有限公司",
+            "status": "进行中，截止 2026-08-05 10:00",
+            "suitability": "中",
+            "suitability_note": "软件/系统交付匹配；事业单位项目",
+            "detail_fetch": "演示数据",
+            "detail_excerpt": "脱敏演示数据，用于展示报告结构和成功运行结果。",
+        },
+    ]
+    return samples
+
+
 def normalize_url(url: str) -> str:
     if not url:
         return ""
@@ -832,12 +879,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--days", type=int, default=14, help="Reserved freshness window for report context.")
     parser.add_argument("--limit-per-query", type=int, default=10)
+    parser.add_argument("--demo", action="store_true", help="Use sanitized sample data and skip network fetching.")
     parser.add_argument("--send-email", action="store_true")
     parser.add_argument("--no-email", action="store_true")
     args = parser.parse_args(argv)
 
     output_dir = Path(args.output_dir)
-    items = discover(days=args.days, limit_per_query=args.limit_per_query)
+    items = demo_items() if args.demo else discover(days=args.days, limit_per_query=args.limit_per_query)
     md_path, json_path, html_path, report, html_body = make_report(items, output_dir)
     print(f"Report written: {md_path}")
     print(f"Data written: {json_path}")

@@ -88,6 +88,12 @@ python guiyang-tender-monitor/scripts/tender_monitor.py --output-dir ./reports -
 python guiyang-tender-monitor/scripts/tender_monitor.py --output-dir ./reports --send-email
 ```
 
+使用脱敏演示数据快速验证：
+
+```powershell
+python guiyang-tender-monitor/scripts/tender_monitor.py --demo --output-dir ./reports-demo --no-email
+```
+
 在 Codex 中可以这样调用：
 
 ```text
@@ -123,6 +129,12 @@ QQ 邮箱应使用 SMTP 授权码，不要使用网页登录密码。
 - 命中原因
 - 风险提示
 - 原始公告链接
+
+## 运行成功示例
+
+以下截图由 `--demo` 模式生成，使用脱敏样例数据，不包含真实客户资料或私有招投标信息。
+
+![全国中小企业软件招采机会日报运行截图](assets/demo-report-success.png)
 
 ## 与标书助手联动
 

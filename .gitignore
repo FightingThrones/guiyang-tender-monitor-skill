@@ -9,6 +9,7 @@ __pycache__/
 *.log
 reports/
 reports-test/
+reports-demo/
 data/
 *.jsonl
 服务器信息*
